@@ -130,6 +130,7 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess, dealId, initialSta
           }
         }
         
+        // Only call onSuccess after all subtasks are created
         onSuccess();
         onClose();
         setFormData({

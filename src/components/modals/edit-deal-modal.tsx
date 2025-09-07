@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DealStage, Priority, DealWithRelations } from '@/types';
 import { X } from 'lucide-react';
+import { LogoInput } from '@/components/ui/logo-preview';
 
 interface EditDealModalProps {
   isOpen: boolean;
@@ -22,13 +23,20 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
     arr: '',
     tam: '',
     dealPriority: 'MEDIUM' as Priority,
-    dealStage: 'PROSPECTING' as DealStage,
+    dealStage: 'ENGAGE' as DealStage,
     productsInUse: '',
     growthOpportunities: '',
     renewalDate: '',
+    teamId: '',
+    salesDirectorId: '',
+    eb: '',
   });
+  const [companyDomain, setCompanyDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen && deal) {
@@ -42,7 +50,74 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
         productsInUse: deal.productsInUse.join(', '),
         growthOpportunities: deal.growthOpportunities.join(', '),
         renewalDate: deal.renewalDate ? new Date(deal.renewalDate).toISOString().split('T')[0] : '',
+        teamId: deal.team?.id || '',
+        salesDirectorId: deal.assignedTo?.id || '',
+        eb: deal.eb || '',
       });
+      setCompanyDomain(deal.companyDomain || '');
+      
+      // Fetch current user and available teams/users for admins and solutions architects
+      const fetchUserAndData = async () => {
+        try {
+          // Get current user info
+          const userResponse = await fetch('/api/auth/me', {
+            credentials: 'include',
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            setCurrentUser(userData.user);
+            
+            // Fetch teams and users based on role
+            if (userData.user.role === 'ADMIN') {
+              // Admin can see all teams and users
+              const [teamsResponse, usersResponse] = await Promise.all([
+                fetch('/api/admin/teams', { credentials: 'include' }),
+                fetch('/api/users', { credentials: 'include' })
+              ]);
+              
+              if (teamsResponse.ok) {
+                const teamsData = await teamsResponse.json();
+                setTeams(teamsData.teams);
+              }
+              
+              if (usersResponse.ok) {
+                const usersData = await usersResponse.json();
+                setUsers(usersData.users.filter((user: any) => user.role === 'SALES_DIRECTOR'));
+              }
+            } else if (userData.user.role === 'SOLUTIONS_ARCHITECT') {
+              // Solutions Architect can see their teams and users from those teams
+              const userTeamsResponse = await fetch('/api/users/me/teams', {
+                credentials: 'include',
+              });
+              if (userTeamsResponse.ok) {
+                const userTeamsData = await userTeamsResponse.json();
+                setTeams(userTeamsData.teams);
+                
+                // Get all users from the SA's teams
+                const allUsers: any[] = [];
+                for (const team of userTeamsData.teams) {
+                  const teamUsersResponse = await fetch(`/api/teams/${team.id}/users`, {
+                    credentials: 'include',
+                  });
+                  if (teamUsersResponse.ok) {
+                    const teamUsersData = await teamUsersResponse.json();
+                    allUsers.push(...teamUsersData.users.filter((user: any) => user.role === 'SALES_DIRECTOR'));
+                  }
+                }
+                // Remove duplicates
+                const uniqueUsers = allUsers.filter((user, index, self) => 
+                  index === self.findIndex(u => u.id === user.id)
+                );
+                setUsers(uniqueUsers);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch user data:', error);
+        }
+      };
+      
+      fetchUserAndData();
     }
   }, [isOpen, deal]);
 
@@ -65,9 +140,13 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
           stakeholders: formData.stakeholders.split(',').map(s => s.trim()).filter(Boolean),
           productsInUse: formData.productsInUse.split(',').map(s => s.trim()).filter(Boolean),
           growthOpportunities: formData.growthOpportunities.split(',').map(s => s.trim()).filter(Boolean),
+          companyDomain: companyDomain || null,
           arr: formData.arr ? parseFloat(formData.arr) : null,
           tam: formData.tam ? parseFloat(formData.tam) : null,
           renewalDate: formData.renewalDate || null,
+          teamId: formData.teamId || null,
+          assignedTo: formData.salesDirectorId || null,
+          eb: formData.eb || null,
         }),
       });
 
@@ -119,6 +198,15 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
               </div>
 
               <div>
+                <LogoInput
+                  value={companyDomain}
+                  onChange={setCompanyDomain}
+                  label="Company Domain"
+                  placeholder="e.g., google.com, microsoft.com"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="dealStage" className="text-gray-900">Deal Stage</Label>
                 <select
                   id="dealStage"
@@ -126,11 +214,12 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
                   onChange={(e) => setFormData({ ...formData, dealStage: e.target.value as DealStage })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
                 >
-                  <option value="PROSPECTING">Prospecting</option>
-                  <option value="DISCOVERY">Discovery</option>
-                  <option value="PROPOSAL">Proposal</option>
-                  <option value="NEGOTIATION">Negotiation</option>
-                  <option value="RENEWAL">Renewal</option>
+                  <option value="ENGAGE">Engage</option>
+                  <option value="DISCOVER">Discover</option>
+                  <option value="SCOPE">Scope</option>
+                  <option value="TECHNICAL_VALIDATION">Technical Validation</option>
+                  <option value="BUSINESS_JUSTIFICATION">Business Justification</option>
+                  <option value="NEGOTIATE">Negotiate</option>
                   <option value="CLOSED_WON">Closed Won</option>
                   <option value="CLOSED_LOST">Closed Lost</option>
                 </select>
@@ -184,6 +273,91 @@ export function EditDealModal({ isOpen, onClose, onSuccess, deal }: EditDealModa
                   onChange={(e) => setFormData({ ...formData, renewalDate: e.target.value })}
                   className="text-gray-900 bg-white"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="eb" className="text-gray-900">Economic Buyer (EB)</Label>
+                <Input
+                  id="eb"
+                  value={formData.eb}
+                  onChange={(e) => setFormData({ ...formData, eb: e.target.value })}
+                  placeholder="Enter economic buyer name"
+                  className="text-gray-900 bg-white"
+                />
+              </div>
+
+              <div>
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SOLUTIONS_ARCHITECT') ? (
+                  <>
+                    <Label htmlFor="teamId" className="text-gray-900">Team</Label>
+                    {teams.length > 0 ? (
+                      <select
+                        id="teamId"
+                        value={formData.teamId}
+                        onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
+                      >
+                        <option value="">Select Team (Optional)</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                        No teams available yet.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Label className="text-gray-900">Team</Label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                      {deal.team?.name || 'No team assigned'}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only administrators and solutions architects can change team assignments
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div>
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SOLUTIONS_ARCHITECT') ? (
+                  <>
+                    <Label htmlFor="salesDirectorId" className="text-gray-900">Sales Director</Label>
+                    {users.length > 0 ? (
+                      <select
+                        id="salesDirectorId"
+                        value={formData.salesDirectorId}
+                        onChange={(e) => setFormData({ ...formData, salesDirectorId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
+                      >
+                        <option value="">Select Sales Director (Optional)</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                        No sales directors available yet.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Label className="text-gray-900">Sales Director</Label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                      {deal.assignedTo ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}` : 'No sales director assigned'}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only administrators and solutions architects can change sales director assignments
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 

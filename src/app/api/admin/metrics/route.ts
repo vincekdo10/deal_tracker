@@ -49,13 +49,6 @@ export const GET = withApiSecurity(async (request: NextRequest) => {
       createdAt: log.createdAt
     }));
 
-    // System health check (simplified)
-    const systemHealth = {
-      database: 'healthy' as const,
-      api: 'healthy' as const,
-      auth: 'healthy' as const
-    };
-
     const metrics = {
       totalUsers,
       activeUsers,
@@ -65,8 +58,7 @@ export const GET = withApiSecurity(async (request: NextRequest) => {
       completedTasks,
       blockedTasks,
       overdueTasks,
-      recentActivity,
-      systemHealth
+      recentActivity
     };
 
     return NextResponse.json({ metrics });

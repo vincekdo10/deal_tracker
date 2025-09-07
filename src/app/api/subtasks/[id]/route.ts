@@ -47,9 +47,9 @@ export const DELETE = withApiSecurity(async (
     }
 
     const { id } = await params;
-    const success = await db.deleteSubtask(id);
-    
-    if (!success) {
+    try {
+      await db.deleteSubtask(id);
+    } catch (error) {
       return NextResponse.json(
         { error: 'Subtask not found or failed to delete' },
         { status: 404 }

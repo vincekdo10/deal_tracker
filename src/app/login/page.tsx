@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthType } from '@/types';
 import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -75,7 +76,6 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Login successful:', data);
         
         // Redirect to dashboard
         window.location.href = redirectTo;
@@ -92,33 +92,40 @@ export default function LoginPage() {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-bg-secondary">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-bg-secondary py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Shield className="h-6 w-6 text-white" />
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Image
+              src="/dbt-labs-logo.svg"
+              alt="dbt Labs"
+              width={120}
+              height={28}
+              className="h-8 w-auto"
+              priority
+            />
+            <h2 className="text-3xl font-bold text-foreground">
+              Deal Tracker
+            </h2>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Deal Tracker
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="text-sm text-text-secondary">
             Secure access to your deal management platform
           </p>
         </div>
         
         {/* Login Card */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-semibold text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">
+        <Card className="shadow-lg border bg-card">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-2xl font-semibold text-center text-foreground">Welcome back</CardTitle>
+            <CardDescription className="text-center text-text-secondary">
               Sign in to continue to your dashboard
             </CardDescription>
           </CardHeader>
@@ -126,11 +133,11 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Auth Type Selection */}
               <div className="space-y-2">
-                <Label htmlFor="authType" className="text-sm font-medium">Authentication Method</Label>
+                <Label htmlFor="authType" className="text-sm font-medium text-foreground">Authentication Method</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
-                    variant={authType === 'APP' ? 'default' : 'outline'}
+                    variant={authType === 'APP' ? 'primary' : 'outline'}
                     onClick={() => setAuthType('APP')}
                     className="h-10"
                   >
@@ -139,7 +146,7 @@ export default function LoginPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant={authType === 'SNOWFLAKE' ? 'default' : 'outline'}
+                    variant={authType === 'SNOWFLAKE' ? 'primary' : 'outline'}
                     onClick={() => setAuthType('SNOWFLAKE')}
                     className="h-10"
                   >
@@ -151,9 +158,9 @@ export default function LoginPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">Email Address</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                   <Input
                     id="email"
                     type="email"
@@ -170,9 +177,9 @@ export default function LoginPage() {
               {/* Password Field */}
               {authType === 'APP' && (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
@@ -186,7 +193,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-tertiary hover:text-slate-600 transition-colors"
                       disabled={loading}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -206,6 +213,7 @@ export default function LoginPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
+                variant="primary"
                 className="w-full h-11 text-base font-medium"
                 disabled={loading}
               >
@@ -223,8 +231,8 @@ export default function LoginPage() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center text-xs text-gray-500">
-          <p>© 2024 Deal Tracker. All rights reserved.</p>
+        <div className="text-center text-xs text-text-tertiary">
+          <p>© 2025 Compiled Insight Software. All rights reserved.</p>
         </div>
       </div>
     </div>

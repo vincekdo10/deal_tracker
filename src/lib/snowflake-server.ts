@@ -19,6 +19,7 @@ interface SnowflakeConfig {
 class SnowflakeService {
   private connection: snowflake.Connection | null = null;
   private config: SnowflakeConfig;
+  private initialized: boolean = false;
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
@@ -71,7 +72,6 @@ class SnowflakeService {
           console.error('Snowflake connection failed:', err);
           reject(err);
         } else {
-          console.log('Connected to Snowflake successfully');
           resolve(conn);
         }
       });
@@ -131,7 +131,6 @@ class SnowflakeService {
   }
 
   async createTables(): Promise<void> {
-    console.log('Creating Snowflake tables...');
     
     const tables = [
       {
@@ -184,6 +183,8 @@ class SnowflakeService {
           deal_stage VARCHAR(50),
           products_in_use VARCHAR(1000),
           growth_opportunities VARCHAR(1000),
+          company_domain VARCHAR(255),
+          eb VARCHAR(255),
           team_id VARCHAR(255) NOT NULL,
           created_by VARCHAR(255) NOT NULL,
           created_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
@@ -245,7 +246,6 @@ class SnowflakeService {
     for (const table of tables) {
       try {
         await this.executeUpdate(table.sql);
-        console.log(`Created table: ${table.name}`);
       } catch (error) {
         console.error(`Error creating table ${table.name}:`, error);
         throw error;
@@ -264,9 +264,8 @@ class SnowflakeService {
       for (const query of alterQueries) {
         try {
           await this.executeUpdate(query);
-          console.log('Added password column successfully');
         } catch (error) {
-          console.log('Column may already exist, skipping:', (error as Error).message);
+          // Column may already exist, skipping
         }
       }
     } catch (error) {
@@ -275,17 +274,46 @@ class SnowflakeService {
     }
   }
 
+  async addCompanyDomainColumn(): Promise<void> {
+    try {
+      // Add company_domain column to deals table if it doesn't exist
+      const query = 'ALTER TABLE deals ADD COLUMN IF NOT EXISTS company_domain VARCHAR(255)';
+      
+      try {
+        await this.executeUpdate(query);
+      } catch (error) {
+        // Column may already exist, skip
+      }
+
+      // Add eb column to deals table if it doesn't exist
+      const ebQuery = 'ALTER TABLE deals ADD COLUMN IF NOT EXISTS eb VARCHAR(255)';
+      
+      try {
+        await this.executeUpdate(ebQuery);
+      } catch (error) {
+        // Column may already exist, skip
+      }
+    } catch (error) {
+      console.error('Error adding company_domain column:', error);
+      throw error;
+    }
+  }
+
   async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    
     try {
       // Check if tables exist, create if they don't
       const usersExists = await this.checkTableExists('users');
       if (!usersExists) {
         await this.createTables();
-        console.log('All tables created successfully');
       } else {
-        console.log('Tables already exist, adding new columns if needed');
         await this.addPasswordColumns();
+        await this.addCompanyDomainColumn();
       }
+      this.initialized = true;
     } catch (error) {
       console.error('Error initializing Snowflake database:', error);
       throw error;

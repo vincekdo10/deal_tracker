@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DealStage, Priority } from '@/types';
 import { X } from 'lucide-react';
+import { LogoInput } from '@/components/ui/logo-preview';
 
 interface CreateDealModalProps {
   isOpen: boolean;
@@ -21,18 +22,47 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
     arr: '',
     tam: '',
     dealPriority: 'MEDIUM' as Priority,
-    dealStage: 'PROSPECTING' as DealStage,
+    dealStage: 'ENGAGE' as DealStage,
     productsInUse: '',
     growthOpportunities: '',
     renewalDate: '',
     salesDirectorId: '',
     teamId: '',
+    eb: '',
   });
+  const [companyDomain, setCompanyDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  const resetForm = () => {
+    setFormData({
+      accountName: '',
+      stakeholders: '',
+      arr: '',
+      tam: '',
+      dealPriority: 'MEDIUM',
+      dealStage: 'ENGAGE',
+      productsInUse: '',
+      growthOpportunities: '',
+      renewalDate: '',
+      salesDirectorId: '',
+      teamId: '',
+      eb: '',
+    });
+    setCompanyDomain('');
+    setError('');
+    setCurrentUser(null);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset form when modal is closed
+      resetForm();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -66,7 +96,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
                 }
               }
             } catch (error) {
-              console.log('No teams available yet');
+              // No teams available yet
             }
             
             // Try to fetch users (optional)
@@ -120,9 +150,30 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
                   ...prev,
                   salesDirectorId: userData.user.id
                 }));
+                
+                // Get the sales director's teams and auto-assign to their team
+                try {
+                  const userTeamsResponse = await fetch('/api/users/me/teams', {
+                    credentials: 'include',
+                  });
+                  if (userTeamsResponse.ok) {
+                    const userTeamsData = await userTeamsResponse.json();
+                    setTeams(userTeamsData.teams);
+                    
+                    // Auto-assign to the first team if they have teams
+                    if (userTeamsData.teams.length > 0) {
+                      setFormData(prev => ({
+                        ...prev,
+                        teamId: userTeamsData.teams[0].id
+                      }));
+                    }
+                  }
+                } catch (error) {
+                  console.error('Failed to fetch user teams:', error);
+                }
               }
             } catch (error) {
-              console.log('No users available yet');
+              // No users available yet
             }
           }
         } catch (error) {
@@ -150,31 +201,20 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
           stakeholders: formData.stakeholders,
           productsInUse: formData.productsInUse,
           growthOpportunities: formData.growthOpportunities,
+          companyDomain: companyDomain || null,
           arr: formData.arr ? parseFloat(formData.arr) : null,
           tam: formData.tam ? parseFloat(formData.tam) : null,
           renewalDate: formData.renewalDate || null,
           teamId: formData.teamId || null,
           assignedTo: formData.salesDirectorId || currentUser?.id || null,
+          eb: formData.eb || null,
         }),
       });
 
       if (response.ok) {
         onSuccess();
+        resetForm();
         onClose();
-        setFormData({
-          accountName: '',
-          stakeholders: '',
-          arr: '',
-          tam: '',
-          dealPriority: 'MEDIUM',
-          dealStage: 'PROSPECTING',
-          productsInUse: '',
-          growthOpportunities: '',
-          renewalDate: '',
-          salesDirectorId: '',
-          teamId: '',
-        });
-        setCurrentUser(null);
       } else {
         const data = await response.json();
         setError(data.error || 'Failed to create deal');
@@ -204,10 +244,10 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
         </CardHeader>
         
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="accountName" className="text-gray-900">Account Name *</Label>
+                <Label htmlFor="accountName" className="text-foreground">Account Name *</Label>
                 <Input
                   id="accountName"
                   value={formData.accountName}
@@ -219,30 +259,40 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
               </div>
 
               <div>
-                <Label htmlFor="dealStage" className="text-gray-900">Deal Stage</Label>
+                <LogoInput
+                  value={companyDomain}
+                  onChange={setCompanyDomain}
+                  label="Company Domain"
+                  placeholder="e.g., google.com, microsoft.com"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="dealStage" className="text-foreground">Deal Stage</Label>
                 <select
                   id="dealStage"
                   value={formData.dealStage}
                   onChange={(e) => setFormData({ ...formData, dealStage: e.target.value as DealStage })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="PROSPECTING">Prospecting</option>
-                  <option value="DISCOVERY">Discovery</option>
-                  <option value="PROPOSAL">Proposal</option>
-                  <option value="NEGOTIATION">Negotiation</option>
-                  <option value="RENEWAL">Renewal</option>
+                  <option value="ENGAGE">Engage</option>
+                  <option value="DISCOVER">Discover</option>
+                  <option value="SCOPE">Scope</option>
+                  <option value="TECHNICAL_VALIDATION">Technical Validation</option>
+                  <option value="BUSINESS_JUSTIFICATION">Business Justification</option>
+                  <option value="NEGOTIATE">Negotiate</option>
                   <option value="CLOSED_WON">Closed Won</option>
                   <option value="CLOSED_LOST">Closed Lost</option>
                 </select>
               </div>
 
               <div>
-                <Label htmlFor="dealPriority" className="text-gray-900">Priority</Label>
+                <Label htmlFor="dealPriority" className="text-foreground">Priority</Label>
                 <select
                   id="dealPriority"
                   value={formData.dealPriority}
                   onChange={(e) => setFormData({ ...formData, dealPriority: e.target.value as Priority })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
@@ -252,7 +302,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
               </div>
 
               <div>
-                <Label htmlFor="arr" className="text-gray-900">ARR ($)</Label>
+                <Label htmlFor="arr" className="text-foreground">ARR ($)</Label>
                 <Input
                   id="arr"
                   type="number"
@@ -264,7 +314,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
               </div>
 
               <div>
-                <Label htmlFor="tam" className="text-gray-900">TAM ($)</Label>
+                <Label htmlFor="tam" className="text-foreground">TAM ($)</Label>
                 <Input
                   id="tam"
                   type="number"
@@ -276,7 +326,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
               </div>
 
               <div>
-                <Label htmlFor="renewalDate" className="text-gray-900">Renewal Date</Label>
+                <Label htmlFor="renewalDate" className="text-foreground">Renewal Date</Label>
                 <Input
                   id="renewalDate"
                   type="date"
@@ -286,112 +336,131 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
                 />
               </div>
 
-              {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SOLUTIONS_ARCHITECT') && (
-                <div>
-                  <Label htmlFor="teamId" className="text-gray-900">Team</Label>
-                  {teams.length > 0 ? (
-                    <select
-                      id="teamId"
-                      value={formData.teamId}
-                      onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
-                    >
-                      <option value="">Select Team (Optional)</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
-                      No teams available yet. You can assign this deal to a team later.
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {teams.length > 0 
-                      ? "You can assign this deal to a team later if needed"
-                      : "Create teams in the admin panel to assign deals to them"
-                    }
-                  </p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="eb" className="text-foreground">Economic Buyer (EB)</Label>
+                <Input
+                  id="eb"
+                  value={formData.eb}
+                  onChange={(e) => setFormData({ ...formData, eb: e.target.value })}
+                  placeholder="Enter economic buyer name"
+                  className="text-gray-900 bg-white"
+                />
+              </div>
 
-              {currentUser?.role === 'SOLUTIONS_ARCHITECT' && (
-                <div>
-                  <Label htmlFor="salesDirectorId" className="text-gray-900">Sales Director</Label>
-                  {users.length > 0 ? (
-                    <select
-                      id="salesDirectorId"
-                      value={formData.salesDirectorId}
-                      onChange={(e) => setFormData({ ...formData, salesDirectorId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
-                    >
-                      <option value="">Select Sales Director (Optional)</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName} ({user.email})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
+              <div>
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SOLUTIONS_ARCHITECT') ? (
+                  <>
+                    <Label htmlFor="teamId" className="text-foreground">Team</Label>
+                    {teams.length > 0 ? (
+                      <select
+                        id="teamId"
+                        value={formData.teamId}
+                        onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select Team (Optional)</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                        No teams available yet. You can assign this deal to a team later.
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {teams.length > 0 
+                        ? "You can assign this deal to a team later if needed"
+                        : "Create teams in the admin panel to assign deals to them"
+                      }
+                    </p>
+                  </>
+                ) : currentUser?.role === 'SALES_DIRECTOR' ? (
+                  <>
+                    <Label className="text-foreground">Team</Label>
+                    {teams.length > 0 ? (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-gray-50">
+                        {teams.find(team => team.id === formData.teamId)?.name || 'Your team will be assigned automatically'}
+                      </div>
+                    ) : (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                        No team assigned yet. Contact an administrator to assign you to a team.
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {teams.length > 0 
+                        ? "This deal will be automatically assigned to your team"
+                        : "You need to be assigned to a team before creating deals"
+                      }
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Label className="text-foreground">Team</Label>
                     <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
-                      No sales directors available yet. You can assign this deal later.
+                      Teams are managed by administrators
                     </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {users.length > 0 
-                      ? "You can assign this deal to a sales director later if needed"
-                      : "Create users in the admin panel to assign deals to them"
-                    }
-                  </p>
-                </div>
-              )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Contact an administrator to assign this deal to a team
+                    </p>
+                  </>
+                )}
+              </div>
 
-              {currentUser?.role === 'ADMIN' && (
-                <div>
-                  <Label htmlFor="salesDirectorId" className="text-gray-900">Sales Director</Label>
-                  {users.length > 0 ? (
-                    <select
-                      id="salesDirectorId"
-                      value={formData.salesDirectorId}
-                      onChange={(e) => setFormData({ ...formData, salesDirectorId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white"
-                    >
-                      <option value="">Select Sales Director (Optional)</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName} ({user.email})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
-                      No sales directors available yet. You can assign this deal later.
+              <div>
+                <Label htmlFor="salesDirectorId" className="text-foreground">Sales Director</Label>
+                {currentUser?.role === 'SALES_DIRECTOR' ? (
+                  <>
+                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-gray-50">
+                      {currentUser.firstName} {currentUser.lastName} ({currentUser.email})
                     </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {users.length > 0 
-                      ? "You can assign this deal to a sales director later if needed"
-                      : "Create users in the admin panel to assign deals to them"
-                    }
-                  </p>
-                </div>
-              )}
-              
-              {currentUser?.role === 'SALES_DIRECTOR' && (
-                <div>
-                  <Label className="text-gray-900">Sales Director</Label>
-                  <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-gray-50">
-                    {currentUser.firstName} {currentUser.lastName} ({currentUser.email})
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">This deal will be assigned to you automatically</p>
-                </div>
-              )}
+                    <p className="text-xs text-gray-500 mt-1">This deal will be assigned to you automatically</p>
+                  </>
+                ) : (currentUser?.role === 'ADMIN' || currentUser?.role === 'SOLUTIONS_ARCHITECT') ? (
+                  <>
+                    {users.length > 0 ? (
+                      <select
+                        id="salesDirectorId"
+                        value={formData.salesDirectorId}
+                        onChange={(e) => setFormData({ ...formData, salesDirectorId: e.target.value })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select Sales Director (Optional)</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                        No sales directors available yet. You can assign this deal later.
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {users.length > 0 
+                        ? "You can assign this deal to a sales director later if needed"
+                        : "Create users in the admin panel to assign deals to them"
+                      }
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-500 bg-gray-50">
+                      Sales directors are managed by administrators
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Contact an administrator to assign this deal to a sales director
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="stakeholders" className="text-gray-900">Stakeholders (comma-separated)</Label>
+              <Label htmlFor="stakeholders" className="text-foreground">Stakeholders (comma-separated)</Label>
               <Input
                 id="stakeholders"
                 value={formData.stakeholders}
@@ -402,7 +471,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
             </div>
 
             <div>
-              <Label htmlFor="productsInUse" className="text-gray-900">Products in Use (comma-separated)</Label>
+              <Label htmlFor="productsInUse" className="text-foreground">Products in Use (comma-separated)</Label>
               <Input
                 id="productsInUse"
                 value={formData.productsInUse}
@@ -413,7 +482,7 @@ export function CreateDealModal({ isOpen, onClose, onSuccess }: CreateDealModalP
             </div>
 
             <div>
-              <Label htmlFor="growthOpportunities" className="text-gray-900">Growth Opportunities (comma-separated)</Label>
+              <Label htmlFor="growthOpportunities" className="text-foreground">Growth Opportunities (comma-separated)</Label>
               <Input
                 id="growthOpportunities"
                 value={formData.growthOpportunities}

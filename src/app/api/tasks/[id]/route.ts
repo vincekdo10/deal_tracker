@@ -54,7 +54,11 @@ export const PUT = withApiSecurity(async (
 
     const { id } = await params;
     const body: UpdateTaskRequest = await request.json();
-    const updatedTask = await db.updateTask(id, body);
+    const updateData = {
+      ...body,
+      expectedUnblockDate: body.expectedUnblockDate ? new Date(body.expectedUnblockDate) : undefined
+    };
+    const updatedTask = await db.updateTask(id, updateData);
     
     if (!updatedTask) {
       return NextResponse.json(

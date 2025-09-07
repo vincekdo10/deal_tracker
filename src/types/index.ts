@@ -6,7 +6,7 @@ export type AuthType = 'SNOWFLAKE' | 'APP';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
 export type SubtaskStatus = 'INCOMPLETE' | 'COMPLETE' | 'BLOCKED';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type DealStage = 'PROSPECTING' | 'DISCOVERY' | 'PROPOSAL' | 'NEGOTIATION' | 'RENEWAL' | 'CLOSED_WON' | 'CLOSED_LOST';
+export type DealStage = 'ENGAGE' | 'DISCOVER' | 'SCOPE' | 'TECHNICAL_VALIDATION' | 'BUSINESS_JUSTIFICATION' | 'NEGOTIATE' | 'CLOSED_WON' | 'CLOSED_LOST';
 export type EntityType = 'USER' | 'TEAM' | 'DEAL' | 'TASK' | 'SUBTASK';
 
 // Base entity interfaces
@@ -46,6 +46,8 @@ export interface Deal {
   teamId?: string | null;
   createdBy: string;
   assignedTo?: string | null;
+  companyDomain?: string; // For Clearbit logo integration
+  eb?: string; // Economic Buyer
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +60,7 @@ export interface Task {
   priority: Priority;
   dueDate?: string;
   blockedReason?: string;
+  expectedUnblockDate?: Date;
   position: number;
   dealId: string;
   assigneeId?: string | null;
@@ -93,6 +96,7 @@ export interface DealWithRelations extends Omit<Deal, 'stakeholders' | 'products
   growthOpportunities: string[];
   team: Team;
   creator: User;
+  assignedTo: User | null;
   tasks: TaskWithSubtasks[];
 }
 
@@ -156,9 +160,11 @@ export interface CreateDealRequest {
   productsInUse: string[];
   growthOpportunities: string[];
   teamId?: string | null;
+  companyDomain?: string; // For Clearbit logo integration
   createdBy?: string; // Will be set by the API
   salesDirectorId?: string; // Sales Director ID
   assignedTo?: string | null; // Assigned user ID
+  eb?: string; // Economic Buyer
 }
 
 export interface UpdateDealRequest extends Partial<CreateDealRequest> {
@@ -288,11 +294,12 @@ export const STATUS_COLORS: StatusColor = {
 };
 
 export const DEAL_STAGE_COLORS: { [key in DealStage]: string } = {
-  PROSPECTING: 'bg-gray-100 text-gray-800',
-  DISCOVERY: 'bg-blue-100 text-blue-800',
-  PROPOSAL: 'bg-yellow-100 text-yellow-800',
-  NEGOTIATION: 'bg-orange-100 text-orange-800',
-  RENEWAL: 'bg-purple-100 text-purple-800',
+  ENGAGE: 'bg-gray-100 text-gray-800',
+  DISCOVER: 'bg-blue-100 text-blue-800',
+  SCOPE: 'bg-indigo-100 text-indigo-800',
+  TECHNICAL_VALIDATION: 'bg-yellow-100 text-yellow-800',
+  BUSINESS_JUSTIFICATION: 'bg-orange-100 text-orange-800',
+  NEGOTIATE: 'bg-purple-100 text-purple-800',
   CLOSED_WON: 'bg-green-100 text-green-800',
   CLOSED_LOST: 'bg-red-100 text-red-800',
 };

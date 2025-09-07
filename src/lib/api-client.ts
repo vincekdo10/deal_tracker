@@ -48,7 +48,7 @@ class ApiClient {
 
     // Add CSRF token for state-changing requests
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET') && csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
+      (headers as any)['X-CSRF-Token'] = csrfToken;
     }
 
     // Add credentials for authentication

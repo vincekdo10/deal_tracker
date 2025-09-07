@@ -28,7 +28,7 @@ export const GET = withApiSecurity(async (
     }
 
     // Get team members for this deal's team
-    let teamMembers = [];
+    let teamMembers: any[] = [];
     
     if (deal.teamId) {
       teamMembers = await db.getUsersByTeam(deal.teamId);

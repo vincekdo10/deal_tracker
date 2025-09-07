@@ -54,7 +54,6 @@ export function EditTeamModal({ isOpen, onClose, team, onTeamUpdated }: EditTeam
     setMessage(null);
 
     try {
-      console.log('Sending team update with formData:', formData);
       await apiClient.put(`/api/admin/teams/${team.id}`, formData);
       setMessage({ type: 'success', text: 'Team updated successfully!' });
       setTimeout(() => {

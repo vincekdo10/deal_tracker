@@ -13,10 +13,8 @@ import {
   AlertCircle, 
   Clock, 
   TrendingUp,
-  Database,
   Settings,
   BarChart3,
-  Shield,
   Activity
 } from 'lucide-react';
 import Link from 'next/link';
@@ -35,11 +33,6 @@ interface AdminMetrics {
     details: string;
     createdAt: string;
   }>;
-  systemHealth: {
-    database: 'healthy' | 'warning' | 'error';
-    api: 'healthy' | 'warning' | 'error';
-    auth: 'healthy' | 'warning' | 'error';
-  };
 }
 
 export default function AdminDashboard() {
@@ -94,23 +87,6 @@ export default function AdminDashboard() {
     );
   }
 
-  const getHealthColor = (status: string) => {
-    switch (status) {
-      case 'healthy': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'error': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getHealthIcon = (status: string) => {
-    switch (status) {
-      case 'healthy': return <CheckCircle className="h-4 w-4" />;
-      case 'warning': return <AlertCircle className="h-4 w-4" />;
-      case 'error': return <AlertCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
 
   return (
     <MainLayout title="Admin Dashboard">
@@ -118,7 +94,7 @@ export default function AdminDashboard() {
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
           <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-blue-100">System overview and management tools</p>
+          <p className="text-blue-100">User and team management tools</p>
         </div>
 
         {/* Key Metrics */}
@@ -176,97 +152,40 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* System Health & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* System Health */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="h-5 w-5 mr-2" />
-                System Health
-              </CardTitle>
-              <CardDescription>Current system status and health indicators</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center">
-                    <Database className="h-5 w-5 mr-3 text-gray-500" />
-                    <span className="font-medium">Database</span>
-                  </div>
-                  <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(metrics.systemHealth.database)}`}>
-                    {getHealthIcon(metrics.systemHealth.database)}
-                    <span className="ml-1 capitalize">{metrics.systemHealth.database}</span>
-                  </div>
-                </div>
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Settings className="h-5 w-5 mr-2" />
+              Quick Actions
+            </CardTitle>
+            <CardDescription>Common administrative tasks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              <Link href="/admin/users">
+                <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-300">
+                  <Users className="h-6 w-6 mb-2" />
+                  <span className="text-sm">Manage Users</span>
+                </Button>
+              </Link>
 
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center">
-                    <Activity className="h-5 w-5 mr-3 text-gray-500" />
-                    <span className="font-medium">API Services</span>
-                  </div>
-                  <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(metrics.systemHealth.api)}`}>
-                    {getHealthIcon(metrics.systemHealth.api)}
-                    <span className="ml-1 capitalize">{metrics.systemHealth.api}</span>
-                  </div>
-                </div>
+              <Link href="/admin/teams">
+                <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-green-50 hover:border-green-300">
+                  <UserCheck className="h-6 w-6 mb-2" />
+                  <span className="text-sm">Manage Teams</span>
+                </Button>
+              </Link>
 
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center">
-                    <UserCheck className="h-5 w-5 mr-3 text-gray-500" />
-                    <span className="font-medium">Authentication</span>
-                  </div>
-                  <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(metrics.systemHealth.auth)}`}>
-                    {getHealthIcon(metrics.systemHealth.auth)}
-                    <span className="ml-1 capitalize">{metrics.systemHealth.auth}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <Link href="/admin/users">
-                  <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-300">
-                    <Users className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Manage Users</span>
-                  </Button>
-                </Link>
-
-                <Link href="/admin/teams">
-                  <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-green-50 hover:border-green-300">
-                    <UserCheck className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Manage Teams</span>
-                  </Button>
-                </Link>
-
-                <Link href="/admin/analytics">
-                  <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-purple-50 hover:border-purple-300">
-                    <BarChart3 className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Analytics</span>
-                  </Button>
-                </Link>
-
-                <Link href="/admin/system">
-                  <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-orange-50 hover:border-orange-300">
-                    <Database className="h-6 w-6 mb-2" />
-                    <span className="text-sm">System Tools</span>
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Link href="/admin/analytics">
+                <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:bg-purple-50 hover:border-purple-300">
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  <span className="text-sm">Analytics</span>
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
         <Card>
@@ -275,7 +194,7 @@ export default function AdminDashboard() {
               <Activity className="h-5 w-5 mr-2" />
               Recent Activity
             </CardTitle>
-            <CardDescription>Latest system events and user actions</CardDescription>
+            <CardDescription>Latest user actions and activities</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

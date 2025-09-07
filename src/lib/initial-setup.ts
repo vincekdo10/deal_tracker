@@ -27,23 +27,19 @@ export async function ensureInitialAdminExists(): Promise<boolean> {
     const existingAdmins = await db.getUsersByRole('ADMIN');
     
     if (existingAdmins.length > 0) {
-      console.log('Admin users already exist, skipping initial setup');
       return true;
     }
 
     // Create initial admin user
-    console.log('Creating initial admin user...');
     const adminUser = await db.createUser({
       email: INITIAL_ADMIN.email,
       firstName: INITIAL_ADMIN.firstName,
       lastName: INITIAL_ADMIN.lastName,
       role: INITIAL_ADMIN.role,
       authType: 'APP',
-      password: INITIAL_ADMIN.temporaryPassword,
-      isActive: INITIAL_ADMIN.isActive
+      password: INITIAL_ADMIN.temporaryPassword
     });
 
-    console.log('Initial admin user created:', adminUser.email);
     return true;
   } catch (error) {
     console.error('Failed to create initial admin user:', error);

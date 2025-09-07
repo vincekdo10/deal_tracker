@@ -1,4 +1,4 @@
-import { User, Team, Deal, Task, Subtask, ActivityLog, UserRole, AuthType, TaskStatus, SubtaskStatus, Priority, DealStage } from '@/types';
+import { User, Team, Deal, Task, Subtask, ActivityLog, UserRole, AuthType, TaskStatus, SubtaskStatus, Priority, DealStage, TaskWithSubtasks } from '@/types';
 import bcrypt from 'bcryptjs';
 import { snowflakeService } from '@/lib/snowflake-server';
 
@@ -224,7 +224,7 @@ export class DatabaseService {
     }
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User> {
+  async updateUser(id: string, data: Partial<User & { password?: string }>): Promise<User> {
     try {
       const updateFields = [];
       const values = [];
@@ -373,16 +373,13 @@ export class DatabaseService {
 
       // Handle team member assignments if memberIds is provided
       if (teamData.memberIds && teamData.memberIds.length > 0) {
-        console.log('Creating team with members:', teamData.memberIds);
         for (const memberId of teamData.memberIds) {
           const userTeamId = `ut-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          console.log('Inserting user_team:', userTeamId, 'for user:', memberId, 'team:', id);
           await snowflakeService.executeUpdate(
             'INSERT INTO user_teams (id, user_id, team_id) VALUES (?, ?, ?)',
             [userTeamId, memberId, id]
           );
         }
-        console.log('Added team members successfully');
       }
 
       const team = await this.getTeamById(id);
@@ -417,29 +414,21 @@ export class DatabaseService {
 
       // Handle team member updates if memberIds is provided
       if (data.memberIds !== undefined) {
-        console.log('Updating team members for team:', id, 'with memberIds:', data.memberIds);
-        
         // First, remove all existing team members
         await snowflakeService.executeUpdate(
           'DELETE FROM user_teams WHERE team_id = ?',
           [id]
         );
-        console.log('Removed existing team members');
 
         // Then add new team members
         if (data.memberIds.length > 0) {
-          console.log('Adding', data.memberIds.length, 'new team members');
           for (const memberId of data.memberIds) {
             const userTeamId = `ut-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            console.log('Inserting user_team:', userTeamId, 'for user:', memberId, 'team:', id);
             await snowflakeService.executeUpdate(
               'INSERT INTO user_teams (id, user_id, team_id) VALUES (?, ?, ?)',
               [userTeamId, memberId, id]
             );
           }
-          console.log('Added new team members successfully');
-        } else {
-          console.log('No members to add, team will have no members');
         }
       }
 
@@ -465,21 +454,17 @@ export class DatabaseService {
     try {
       // First, get all tasks associated with this deal
       const tasks = await this.getTasksForDeal(id);
-      console.log(`Deleting deal ${id} with ${tasks.length} associated tasks`);
       
       // Delete all subtasks for each task
       for (const task of tasks) {
-        const subtaskCount = await snowflakeService.executeUpdate('DELETE FROM subtasks WHERE task_id = ?', [task.id]);
-        console.log(`Deleted ${subtaskCount} subtasks for task ${task.id}`);
+        await snowflakeService.executeUpdate('DELETE FROM subtasks WHERE task_id = ?', [task.id]);
       }
       
       // Delete all tasks associated with this deal
-      const taskCount = await snowflakeService.executeUpdate('DELETE FROM tasks WHERE deal_id = ?', [id]);
-      console.log(`Deleted ${taskCount} tasks for deal ${id}`);
+      await snowflakeService.executeUpdate('DELETE FROM tasks WHERE deal_id = ?', [id]);
       
       // Finally, delete the deal itself
       await snowflakeService.executeUpdate('DELETE FROM deals WHERE id = ?', [id]);
-      console.log(`Successfully deleted deal ${id} and all associated data`);
       
       return true;
     } catch (error) {
@@ -491,12 +476,10 @@ export class DatabaseService {
   async deleteTask(id: string): Promise<boolean> {
     try {
       // First delete all subtasks associated with this task
-      const subtaskCount = await snowflakeService.executeUpdate('DELETE FROM subtasks WHERE task_id = ?', [id]);
-      console.log(`Deleted ${subtaskCount} subtasks for task ${id}`);
+      await snowflakeService.executeUpdate('DELETE FROM subtasks WHERE task_id = ?', [id]);
       
       // Then delete the task itself
       await snowflakeService.executeUpdate('DELETE FROM tasks WHERE id = ?', [id]);
-      console.log(`Successfully deleted task ${id} and all associated subtasks`);
       
       return true;
     } catch (error) {
@@ -507,12 +490,9 @@ export class DatabaseService {
 
   async deleteUser(id: string, reassignToUserId?: string): Promise<boolean> {
     try {
-      console.log(`Starting graceful deletion of user ${id}${reassignToUserId ? ` with reassignment to ${reassignToUserId}` : ''}`);
-      
-      // 1. Get user info before deletion for logging
+      // 1. Get user info before deletion
       const user = await this.getUserById(id);
       if (!user) {
-        console.log('User not found, nothing to delete');
         return true;
       }
 
@@ -525,14 +505,12 @@ export class DatabaseService {
       if (dealsCreated.length > 0) {
         if (reassignToUserId) {
           // Reassign deals to another user
-          console.log(`Reassigning ${dealsCreated.length} deals to user ${reassignToUserId}`);
           await snowflakeService.executeUpdate(
             'UPDATE deals SET created_by = ? WHERE created_by = ?',
             [reassignToUserId, id]
           );
         } else {
           // Delete deals created by this user (cascade delete tasks and subtasks)
-          console.log(`Deleting ${dealsCreated.length} deals created by user`);
           for (const deal of dealsCreated) {
             await this.deleteDeal(deal.ID);
           }
@@ -548,14 +526,12 @@ export class DatabaseService {
       if (dealsAssigned.length > 0) {
         if (reassignToUserId) {
           // Reassign deals to another user
-          console.log(`Reassigning ${dealsAssigned.length} assigned deals to user ${reassignToUserId}`);
           await snowflakeService.executeUpdate(
             'UPDATE deals SET assigned_to = ? WHERE assigned_to = ?',
             [reassignToUserId, id]
           );
         } else {
           // Unassign deals (set assigned_to to NULL)
-          console.log(`Unassigning ${dealsAssigned.length} deals from user`);
           await snowflakeService.executeUpdate(
             'UPDATE deals SET assigned_to = NULL WHERE assigned_to = ?',
             [id]
@@ -572,14 +548,12 @@ export class DatabaseService {
       if (tasksAssigned.length > 0) {
         if (reassignToUserId) {
           // Reassign tasks to another user
-          console.log(`Reassigning ${tasksAssigned.length} tasks to user ${reassignToUserId}`);
           await snowflakeService.executeUpdate(
             'UPDATE tasks SET assignee_id = ? WHERE assignee_id = ?',
             [reassignToUserId, id]
           );
         } else {
           // Unassign tasks (set assignee_id to NULL)
-          console.log(`Unassigning ${tasksAssigned.length} tasks from user`);
           await snowflakeService.executeUpdate(
             'UPDATE tasks SET assignee_id = NULL WHERE assignee_id = ?',
             [id]
@@ -594,7 +568,6 @@ export class DatabaseService {
       );
       
       if (userTeams.length > 0) {
-        console.log(`Removing user from ${userTeams.length} teams`);
         await snowflakeService.executeUpdate('DELETE FROM user_teams WHERE user_id = ?', [id]);
       }
 
@@ -605,15 +578,11 @@ export class DatabaseService {
       );
       
       if (activityLogs[0]?.COUNT > 0) {
-        console.log(`Deleting ${activityLogs[0].COUNT} activity logs`);
         await snowflakeService.executeUpdate('DELETE FROM activity_logs WHERE user_id = ?', [id]);
       }
 
       // 7. Finally, delete the user
-      console.log(`Deleting user ${id} (${user.firstName} ${user.lastName})`);
       await snowflakeService.executeUpdate('DELETE FROM users WHERE id = ?', [id]);
-      
-      console.log(`Successfully deleted user ${id} and handled all related data`);
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -623,15 +592,12 @@ export class DatabaseService {
 
   async softDeleteUser(id: string): Promise<boolean> {
     try {
-      console.log(`Soft deleting user ${id} (deactivating)`);
-      
       // Simply deactivate the user instead of deleting
       await snowflakeService.executeUpdate(
         'UPDATE users SET is_active = false, updated_at = CURRENT_TIMESTAMP() WHERE id = ?',
         [id]
       );
       
-      console.log(`Successfully soft deleted user ${id}`);
       return true;
     } catch (error) {
       console.error('Error soft deleting user:', error);
@@ -676,14 +642,12 @@ export class DatabaseService {
 
   async getTeamMembers(teamId: string): Promise<User[]> {
     try {
-      console.log('Getting team members for team:', teamId);
       const results = await snowflakeService.executeQuery<any>(
         `SELECT u.* FROM users u
          JOIN user_teams ut ON u.id = ut.user_id
          WHERE ut.team_id = ?`,
         [teamId]
       );
-      console.log('Found', results.length, 'team members:', results.map(r => ({ id: r.ID, name: r.FIRST_NAME + ' ' + r.LAST_NAME })));
       return results.map(user => ({
         id: user.ID,
         email: user.EMAIL,
@@ -719,6 +683,7 @@ export class DatabaseService {
         dealStage: deal.DEAL_STAGE,
         productsInUse: deal.PRODUCTS_IN_USE,
         growthOpportunities: deal.GROWTH_OPPORTUNITIES,
+        companyDomain: deal.COMPANY_DOMAIN,
         teamId: deal.TEAM_ID,
         createdBy: deal.CREATED_BY,
         createdAt: deal.CREATED_AT,
@@ -735,13 +700,10 @@ export class DatabaseService {
       let sql = 'SELECT * FROM deals ORDER BY created_at DESC';
       let binds: any[] = [];
 
-      console.log('getDealsForUser called with userId:', userId, 'userRole:', userRole);
-
       if (userRole === 'ADMIN') {
         // Admin can see all deals
         sql = 'SELECT * FROM deals ORDER BY created_at DESC';
         binds = [];
-        console.log('ADMIN: Getting all deals');
       } else if (userRole === 'SOLUTIONS_ARCHITECT') {
         // SA can see deals from their teams or deals they created
         sql = `
@@ -751,20 +713,13 @@ export class DatabaseService {
           ORDER BY d.created_at DESC
         `;
         binds = [userId, userId];
-        console.log('SA: Getting deals from teams or created by user');
       } else if (userRole === 'SALES_DIRECTOR') {
         // Sales Director can see deals they created or are assigned to
         sql = 'SELECT * FROM deals WHERE created_by = ? OR assigned_to = ? ORDER BY created_at DESC';
         binds = [userId, userId];
-        console.log('SD: Getting deals created by or assigned to user:', userId);
       }
       
-      console.log('Executing SQL:', sql, 'with binds:', binds);
       const results = await snowflakeService.executeQuery<any>(sql, binds);
-      console.log('Found', results.length, 'deals for user');
-      results.forEach(deal => {
-        console.log('Deal:', deal.ACCOUNT_NAME, 'created by:', deal.CREATED_BY, 'assigned to:', deal.ASSIGNED_TO);
-      });
       return results.map(deal => ({
         id: deal.ID,
         accountName: deal.ACCOUNT_NAME,
@@ -776,6 +731,8 @@ export class DatabaseService {
         dealStage: deal.DEAL_STAGE,
         productsInUse: deal.PRODUCTS_IN_USE ? deal.PRODUCTS_IN_USE.split(',').map((s: string) => s.trim()) : [],
         growthOpportunities: deal.GROWTH_OPPORTUNITIES ? deal.GROWTH_OPPORTUNITIES.split(',').map((s: string) => s.trim()) : [],
+        companyDomain: deal.COMPANY_DOMAIN,
+        eb: deal.EB,
         teamId: deal.TEAM_ID,
         createdBy: deal.CREATED_BY,
         assignedTo: deal.ASSIGNED_TO,
@@ -799,7 +756,7 @@ export class DatabaseService {
       
       const deal = results[0];
       
-      return {
+      const result = {
         id: deal.ID,
         accountName: deal.ACCOUNT_NAME,
         stakeholders: deal.STAKEHOLDERS ? deal.STAKEHOLDERS.split(',').map((s: string) => s.trim()) : [],
@@ -810,12 +767,15 @@ export class DatabaseService {
         dealStage: deal.DEAL_STAGE as DealStage,
         productsInUse: deal.PRODUCTS_IN_USE ? deal.PRODUCTS_IN_USE.split(',').map((s: string) => s.trim()) : [],
         growthOpportunities: deal.GROWTH_OPPORTUNITIES ? deal.GROWTH_OPPORTUNITIES.split(',').map((s: string) => s.trim()) : [],
+        companyDomain: deal.COMPANY_DOMAIN,
+        eb: deal.EB,
         teamId: deal.TEAM_ID,
         createdBy: deal.CREATED_BY,
         assignedTo: deal.ASSIGNED_TO,
         createdAt: deal.CREATED_AT,
         updatedAt: deal.UPDATED_AT
       };
+      return result;
     } catch (error) {
       console.error('Error getting deal by id:', error);
       return null;
@@ -832,16 +792,18 @@ export class DatabaseService {
     dealStage?: DealStage;
     productsInUse?: string;
     growthOpportunities?: string;
+    companyDomain?: string;
     teamId?: string | null;
     createdBy: string;
     assignedTo?: string | null;
+    eb?: string;
   }): Promise<Deal> {
     const id = `deal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     try {
       await snowflakeService.executeUpdate(
-        `INSERT INTO deals (id, account_name, stakeholders, renewal_date, arr, tam, deal_priority, deal_stage, products_in_use, growth_opportunities, team_id, created_by, assigned_to)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO deals (id, account_name, stakeholders, renewal_date, arr, tam, deal_priority, deal_stage, products_in_use, growth_opportunities, company_domain, eb, team_id, created_by, assigned_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           dealData.accountName,
@@ -853,6 +815,8 @@ export class DatabaseService {
           dealData.dealStage || null,
           dealData.productsInUse || null,
           dealData.growthOpportunities || null,
+          dealData.companyDomain || null,
+          dealData.eb || null,
           dealData.teamId || null,
           dealData.createdBy,
           dealData.assignedTo || null
@@ -928,6 +892,10 @@ export class DatabaseService {
       if (data.assignedTo !== undefined) {
         updateFields.push('assigned_to = ?');
         values.push(data.assignedTo);
+      }
+      if (data.eb !== undefined) {
+        updateFields.push('eb = ?');
+        values.push(data.eb);
       }
 
       updateFields.push('updated_at = CURRENT_TIMESTAMP()');
@@ -1010,10 +978,17 @@ export class DatabaseService {
         const subtasks = await this.getSubtasksForTask(task.id);
         const deal = await this.getDealById(dealId);
         
+        // Get assignee information if task has an assignee
+        let assignee = undefined;
+        if (task.assigneeId) {
+          assignee = await this.getUserById(task.assigneeId);
+        }
+        
         if (deal) {
           tasksWithSubtasks.push({
             ...task,
             subtasks,
+            assignee: assignee || undefined,
             deal
           });
         }
@@ -1188,15 +1163,16 @@ export class DatabaseService {
         'SELECT * FROM subtasks WHERE task_id = ? ORDER BY position ASC, created_at ASC',
         [taskId]
       );
+      
       return results.map(subtask => ({
-        id: subtask.ID,
-        title: subtask.TITLE,
-        status: subtask.STATUS,
-        blockedReason: subtask.BLOCKED_REASON,
-        position: subtask.POSITION,
-        taskId: subtask.TASK_ID,
-        createdAt: subtask.CREATED_AT,
-        updatedAt: subtask.UPDATED_AT
+        id: subtask.id || subtask.ID,
+        title: subtask.title || subtask.TITLE,
+        status: subtask.status || subtask.STATUS,
+        blockedReason: subtask.blocked_reason || subtask.BLOCKED_REASON,
+        position: subtask.position || subtask.POSITION,
+        taskId: subtask.task_id || subtask.TASK_ID,
+        createdAt: subtask.created_at || subtask.CREATED_AT,
+        updatedAt: subtask.updated_at || subtask.UPDATED_AT
       }));
     } catch (error) {
       console.error('Error getting subtasks for task:', error);
@@ -1223,9 +1199,13 @@ export class DatabaseService {
          VALUES (?, ?, ?, ?, ?)`,
         [id, subtaskData.title, status, position, subtaskData.taskId]
       );
-
+      
       const subtask = await this.getSubtaskById(id);
       if (!subtask) throw new Error('Failed to create subtask');
+      
+      // Update parent task status based on subtask completion
+      await this.updateTaskStatusBasedOnSubtasks(subtaskData.taskId);
+      
       return subtask;
     } catch (error) {
       console.error('Error creating subtask:', error);
@@ -1243,14 +1223,14 @@ export class DatabaseService {
       
       const subtask = results[0];
       return {
-        id: subtask.ID,
-        title: subtask.TITLE,
-        status: subtask.STATUS,
-        blockedReason: subtask.BLOCKED_REASON,
-        position: subtask.POSITION,
-        taskId: subtask.TASK_ID,
-        createdAt: subtask.CREATED_AT,
-        updatedAt: subtask.UPDATED_AT
+        id: subtask.id || subtask.ID,
+        title: subtask.title || subtask.TITLE,
+        status: subtask.status || subtask.STATUS,
+        blockedReason: subtask.blocked_reason || subtask.BLOCKED_REASON,
+        position: subtask.position || subtask.POSITION,
+        taskId: subtask.task_id || subtask.TASK_ID,
+        createdAt: subtask.created_at || subtask.CREATED_AT,
+        updatedAt: subtask.updated_at || subtask.UPDATED_AT
       };
     } catch (error) {
       console.error('Error getting subtask by id:', error);
@@ -1286,6 +1266,10 @@ export class DatabaseService {
 
       const subtask = await this.getSubtaskById(id);
       if (!subtask) throw new Error('Subtask not found');
+      
+      // Update parent task status based on subtask completion
+      await this.updateTaskStatusBasedOnSubtasks(subtask.taskId);
+      
       return subtask;
     } catch (error) {
       console.error('Error updating subtask:', error);
@@ -1295,7 +1279,16 @@ export class DatabaseService {
 
   async deleteSubtask(id: string): Promise<void> {
     try {
+      // Get the subtask first to get the taskId
+      const subtask = await this.getSubtaskById(id);
+      if (!subtask) throw new Error('Subtask not found');
+      
+      const taskId = subtask.taskId;
+      
       await snowflakeService.executeUpdate('DELETE FROM subtasks WHERE id = ?', [id]);
+      
+      // Update parent task status based on remaining subtasks
+      await this.updateTaskStatusBasedOnSubtasks(taskId);
     } catch (error) {
       console.error('Error deleting subtask:', error);
       throw error;
@@ -1450,6 +1443,53 @@ export class DatabaseService {
         recentActivity: [],
         deals: []
       };
+    }
+  }
+
+  // Helper function to update task status based on subtask completion
+  async updateTaskStatusBasedOnSubtasks(taskId: string): Promise<void> {
+    try {
+      // Get all subtasks for this task
+      const subtasks = await this.getSubtasksForTask(taskId);
+      
+      if (subtasks.length === 0) {
+        // No subtasks, don't change task status
+        return;
+      }
+
+      const completedSubtasks = subtasks.filter(subtask => subtask.status === 'COMPLETE');
+      const blockedSubtasks = subtasks.filter(subtask => subtask.status === 'BLOCKED');
+      const totalSubtasks = subtasks.length;
+
+      // Get current task
+      const task = await this.getTaskById(taskId);
+      if (!task) return;
+
+      let newStatus: TaskStatus | null = null;
+
+      // If all subtasks are completed, task should be DONE
+      if (completedSubtasks.length === totalSubtasks) {
+        newStatus = 'DONE';
+      }
+      // If any subtask is blocked, task should be BLOCKED
+      else if (blockedSubtasks.length > 0) {
+        newStatus = 'BLOCKED';
+      }
+      // If task was DONE but now has incomplete subtasks, move to IN_PROGRESS
+      else if (task.status === 'DONE' && completedSubtasks.length < totalSubtasks) {
+        newStatus = 'IN_PROGRESS';
+      }
+      // If task was BLOCKED but no subtasks are blocked anymore, move to IN_PROGRESS
+      else if (task.status === 'BLOCKED' && blockedSubtasks.length === 0 && completedSubtasks.length < totalSubtasks) {
+        newStatus = 'IN_PROGRESS';
+      }
+
+      // Update task status if needed
+      if (newStatus && newStatus !== task.status) {
+        await this.updateTask(taskId, { status: newStatus });
+      }
+    } catch (error) {
+      console.error('Error updating task status based on subtasks:', error);
     }
   }
 }

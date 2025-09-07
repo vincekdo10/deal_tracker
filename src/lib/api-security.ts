@@ -17,13 +17,13 @@ const securityConfig: SecurityConfig = {
   ],
   allowedUserAgents: [
     // Allow browser user agents
-    /Mozilla\/.*/,
-    /Chrome\/.*/,
-    /Safari\/.*/,
-    /Firefox\/.*/,
-    /Edge\/.*/,
+    'Mozilla',
+    'Chrome',
+    'Safari',
+    'Firefox',
+    'Edge',
     // Allow Next.js internal requests
-    /Next\.js/,
+    'Next.js',
   ],
   maxRequestsPerMinute: 60,
   requireCSRF: true
@@ -49,7 +49,7 @@ export function validateApiSecurity(request: NextRequest): NextResponse | null {
 
   // 2. User-Agent Validation
   if (userAgent && !securityConfig.allowedUserAgents.some(pattern => 
-    typeof pattern === 'string' ? userAgent.includes(pattern) : pattern.test(userAgent)
+    userAgent.includes(pattern)
   )) {
     console.warn(`🚫 Blocked request with suspicious user agent: ${userAgent}`);
     return NextResponse.json(

@@ -6,6 +6,10 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import { DashboardMetrics } from '@/types';
+import { LogoPreview } from '@/components/ui/logo-preview';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { Badge } from '@/components/ui/badge';
+import { Briefcase, DollarSign, TrendingUp, Users, AlertTriangle } from 'lucide-react';
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -36,8 +40,8 @@ export default function DashboardPage() {
     return (
       <MainLayout title="Dashboard">
         <div className="animate-pulse space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {[...Array(5)].map((_, i) => (
               <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
             ))}
           </div>
@@ -50,50 +54,41 @@ export default function DashboardPage() {
     <MainLayout title="Dashboard" subtitle="Overview of your deals and tasks">
       <div className="space-y-6">
         {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg hover:shadow-blue-100 transition-all duration-200 border border-gray-200 hover:border-blue-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total ARR</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(metrics?.totalArr || 0)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg hover:shadow-green-100 transition-all duration-200 border border-gray-200 hover:border-green-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {metrics?.activeDeals || 0}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg hover:shadow-yellow-100 transition-all duration-200 border border-gray-200 hover:border-yellow-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {metrics?.openTasks || 0}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg hover:shadow-red-100 transition-all duration-200 border border-gray-200 hover:border-red-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {metrics?.overdueTasks || 0}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <MetricCard
+            title="Total ARR"
+            value={formatCurrency(metrics?.totalArr || 0)}
+            icon={<DollarSign className="w-6 h-6" />}
+            color="orange"
+          />
+          
+          <MetricCard
+            title="Active Deals"
+            value={metrics?.activeDeals || 0}
+            icon={<Briefcase className="w-6 h-6" />}
+            color="teal"
+          />
+          
+          <MetricCard
+            title="Open Tasks"
+            value={metrics?.openTasks || 0}
+            icon={<TrendingUp className="w-6 h-6" />}
+            color="blue"
+          />
+          
+          <MetricCard
+            title="Blocked Tasks"
+            value={metrics?.blockedTasks || 0}
+            icon={<AlertTriangle className="w-6 h-6" />}
+            color="red"
+          />
+          
+          <MetricCard
+            title="Overdue Tasks"
+            value={metrics?.overdueTasks || 0}
+            icon={<Users className="w-6 h-6" />}
+            color="purple"
+          />
         </div>
 
         {/* Recent Deals */}
@@ -111,6 +106,13 @@ export default function DashboardPage() {
                   <div key={deal.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
+                        {deal.companyDomain && (
+                          <LogoPreview 
+                            domain={deal.companyDomain} 
+                            size="sm" 
+                            className="flex-shrink-0"
+                          />
+                        )}
                         <h3 className="font-medium text-lg">{deal.accountName}</h3>
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           deal.dealStage === 'PROSPECTING' ? 'bg-blue-100 text-blue-800' :
@@ -137,6 +139,11 @@ export default function DashboardPage() {
                           : 'No stakeholders listed'
                         }
                       </p>
+                      {deal.eb && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Economic Buyer: <span className="font-medium">{deal.eb}</span>
+                        </p>
+                      )}
                       {deal.renewalDate && (
                         <p className="text-sm text-gray-500 mt-1">
                           Renewal: {new Date(deal.renewalDate).toLocaleDateString()}

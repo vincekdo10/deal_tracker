@@ -6,6 +6,9 @@ import { withApiSecurity } from '@/lib/secure-api';
 
 export const GET = withApiSecurity(async (request: NextRequest) => {
   try {
+    // Initialize database if not already done
+    await db.initialize();
+    
     const userPayload = getUserFromRequest(request);
     
     if (!userPayload) {
@@ -24,7 +27,6 @@ export const GET = withApiSecurity(async (request: NextRequest) => {
       );
     }
 
-    console.log('Getting deals for user:', user.firstName, user.lastName, 'role:', user.role);
     const deals = await db.getDealsForUser(userPayload.userId, user.role);
     
     // Convert to DealWithRelations by fetching additional data
@@ -51,15 +53,15 @@ export const GET = withApiSecurity(async (request: NextRequest) => {
         return {
           ...deal,
           // Convert comma-separated strings back to arrays, handle null/undefined values
-          stakeholders: deal.stakeholders && typeof deal.stakeholders === 'string' 
-            ? deal.stakeholders.split(',').map(s => s.trim()).filter(s => s.length > 0)
-            : (deal.stakeholders || []),
-          productsInUse: deal.productsInUse && typeof deal.productsInUse === 'string'
-            ? deal.productsInUse.split(',').map(s => s.trim()).filter(s => s.length > 0)
-            : (deal.productsInUse || []),
-          growthOpportunities: deal.growthOpportunities && typeof deal.growthOpportunities === 'string'
-            ? deal.growthOpportunities.split(',').map(s => s.trim()).filter(s => s.length > 0)
-            : (deal.growthOpportunities || []),
+          stakeholders: typeof deal.stakeholders === 'string' 
+            ? (deal.stakeholders as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.stakeholders) ? deal.stakeholders : []),
+          productsInUse: typeof deal.productsInUse === 'string'
+            ? (deal.productsInUse as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.productsInUse) ? deal.productsInUse : []),
+          growthOpportunities: typeof deal.growthOpportunities === 'string'
+            ? (deal.growthOpportunities as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.growthOpportunities) ? deal.growthOpportunities : []),
           creator: creator || { id: deal.createdBy, firstName: 'Unknown', lastName: 'User', email: 'unknown@example.com' },
           assignedTo: assignedTo || null,
           team: team || { id: 'no-team', name: 'No Team', description: 'No team assigned' },
@@ -78,15 +80,14 @@ export const GET = withApiSecurity(async (request: NextRequest) => {
   }
 });
 
-export const POST = async (request: NextRequest) => {
-  console.log('Deal creation request received');
-  
+export const POST = withApiSecurity(async (request: NextRequest) => {
   try {
+    // Initialize database if not already done
+    await db.initialize();
+    
     const userPayload = getUserFromRequest(request);
-    console.log('User payload:', userPayload);
     
     if (!userPayload) {
-      console.log('No user payload found');
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -94,7 +95,6 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body: CreateDealRequest = await request.json();
-    console.log('Request body:', body);
     
     // Validate required fields
     if (!body.accountName) {
@@ -108,16 +108,14 @@ export const POST = async (request: NextRequest) => {
     const dealData = {
       ...body,
       createdBy: userPayload.userId,
-      renewalDate: body.renewalDate ? new Date(body.renewalDate) : null,
+      renewalDate: body.renewalDate ? new Date(body.renewalDate) : undefined,
       // Convert arrays to comma-separated strings for database storage
       stakeholders: Array.isArray(body.stakeholders) ? body.stakeholders.join(', ') : body.stakeholders,
       productsInUse: Array.isArray(body.productsInUse) ? body.productsInUse.join(', ') : body.productsInUse,
       growthOpportunities: Array.isArray(body.growthOpportunities) ? body.growthOpportunities.join(', ') : body.growthOpportunities
     };
 
-    console.log('Deal data to create:', dealData);
     const deal = await db.createDeal(dealData);
-    console.log('Deal created successfully:', deal);
     
     return NextResponse.json({ deal }, { status: 201 });
   } catch (error) {
@@ -127,4 +125,4 @@ export const POST = async (request: NextRequest) => {
       { status: 500 }
     );
   }
-};
+});

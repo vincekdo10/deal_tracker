@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { 
   LayoutDashboard, 
@@ -35,7 +36,6 @@ const adminNavigation = [
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['ADMIN'] },
   { name: 'Teams', href: '/admin/teams', icon: User, roles: ['ADMIN'] },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, roles: ['ADMIN'] },
-  { name: 'System Tools', href: '/admin/system', icon: Settings, roles: ['ADMIN'] },
 ];
 
 export function Sidebar({ user, onLogout }: SidebarProps) {
@@ -46,9 +46,20 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   );
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gray-900 text-white">
+    <div className="flex h-full w-64 flex-col bg-slate-900 text-white">
       <div className="flex h-16 items-center px-6">
-        <h1 className="text-xl font-bold">Deal Tracker</h1>
+        <div className="flex items-center space-x-3">
+          <div className="flex-shrink-0 bg-white rounded-lg p-2 shadow-sm">
+            <Image
+              src="/dbt-labs-logo.svg"
+              alt="dbt Labs"
+              width={120}
+              height={28}
+              className="h-6 w-auto"
+              priority
+            />
+          </div>
+        </div>
       </div>
       
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -59,16 +70,16 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
               key={item.name}
               href={item.href}
               className={cn(
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                'group flex items-center px-3 py-2 text-sm font-medium rounded-dbt transition-all duration-200',
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-slate-100 text-slate-700'
+                  : 'text-gray-400 hover:bg-slate-800 hover:text-white'
               )}
             >
               <item.icon
                 className={cn(
                   'mr-3 h-5 w-5 flex-shrink-0',
-                  isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                  isActive ? 'text-slate-700' : 'text-text-tertiary group-hover:text-white'
                 )}
               />
               {item.name}
@@ -79,9 +90,9 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
         {/* Admin Section */}
         {user.role === 'ADMIN' && (
           <>
-            <div className="border-t border-gray-700 my-4"></div>
+            <div className="border-t border-slate-700 my-4"></div>
             <div className="px-3 py-2">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
                 Administration
               </h3>
             </div>
@@ -95,16 +106,16 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                    'group flex items-center px-3 py-2 text-sm font-medium rounded-dbt transition-all duration-200',
                     isActive
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      ? 'bg-slate-100 text-slate-700'
+                      : 'text-gray-400 hover:bg-slate-800 hover:text-white'
                   )}
                 >
                   <item.icon
                     className={cn(
                       'mr-3 h-5 w-5 flex-shrink-0',
-                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                      isActive ? 'text-slate-700' : 'text-text-tertiary group-hover:text-white'
                     )}
                   />
                   {item.name}
@@ -115,10 +126,10 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
         )}
       </nav>
 
-      <div className="border-t border-gray-700 p-4">
+      <div className="border-t border-slate-700 p-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <div className="h-8 w-8 rounded-full bg-gray-600 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-slate-600 flex items-center justify-center">
               <span className="text-sm font-medium text-white">
                 {user.firstName.charAt(0)}{user.lastName.charAt(0)}
               </span>
@@ -128,7 +139,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
             <p className="text-sm font-medium text-white">
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-xs text-gray-400 capitalize">
+            <p className="text-xs text-text-tertiary capitalize">
               {user.role.toLowerCase().replace('_', ' ')}
             </p>
           </div>
@@ -136,7 +147,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
             variant="ghost"
             size="icon"
             onClick={onLogout}
-            className="ml-2 text-gray-400 hover:text-white hover:bg-gray-700"
+            className="ml-2 text-gray-400 hover:text-white hover:bg-slate-800"
           >
             <LogOut className="h-4 w-4" />
           </Button>

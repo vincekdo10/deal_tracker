@@ -106,7 +106,11 @@ export const POST = withApiSecurity(async (
       );
     }
 
-    const task = await db.createTask(body);
+    const taskData = {
+      ...body,
+      dueDate: body.dueDate ? new Date(body.dueDate) : undefined
+    };
+    const task = await db.createTask(taskData);
     
     return NextResponse.json({ task }, { status: 201 });
   } catch (error) {

@@ -29,7 +29,6 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           const data = await response.json();
           setUser(data.user);
         } else {
-          console.log('Auth failed, redirecting to login');
           router.push('/login');
         }
       } catch (error) {
@@ -66,14 +65,14 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
 
   return (
     <PasswordChangeGuard user={user}>
-      <div className="flex h-screen bg-gray-100">
+      <div className="flex h-screen bg-bg-secondary">
         <Sidebar user={user} onLogout={handleLogout} />
         
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header title={title} subtitle={subtitle} />
           
           <main className="flex-1 overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4">
               {children}
             </div>
           </main>

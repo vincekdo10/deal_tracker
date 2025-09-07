@@ -14,11 +14,8 @@ export const POST = withApiSecurity(async (request: NextRequest) => {
 
     const body: CreateSubtaskRequest = await request.json();
     
-    console.log('Subtask creation request body:', JSON.stringify(body, null, 2));
-    
     // Validate required fields
     if (!body.title || !body.taskId) {
-      console.log('Validation failed - title:', body.title, 'taskId:', body.taskId);
       return NextResponse.json(
         { error: 'Title and taskId are required' },
         { status: 400 }

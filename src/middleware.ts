@@ -16,20 +16,16 @@ const protectedRoutes = [
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  console.log('Middleware running for:', pathname);
   
   // Handle API routes with CSRF token generation
   if (pathname.startsWith('/api/')) {
-    console.log('API route, checking CSRF token:', pathname);
     const response = NextResponse.next();
     
     // Only generate CSRF token if it doesn't exist
     const existingToken = request.cookies.get('csrf-token')?.value;
     if (!existingToken) {
-      console.log('No existing CSRF token, generating new one');
       setCSRFToken(response);
     } else {
-      console.log('Using existing CSRF token');
       // Pass through the existing token in headers
       response.headers.set('x-csrf-token', existingToken);
     }

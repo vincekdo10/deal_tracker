@@ -53,15 +53,15 @@ export const GET = withApiSecurity(async (
     const dealWithRelations = {
       ...deal,
       // Convert comma-separated strings back to arrays, handle null/undefined values
-      stakeholders: deal.stakeholders && typeof deal.stakeholders === 'string' 
-        ? deal.stakeholders.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : (deal.stakeholders || []),
-      productsInUse: deal.productsInUse && typeof deal.productsInUse === 'string'
-        ? deal.productsInUse.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : (deal.productsInUse || []),
-      growthOpportunities: deal.growthOpportunities && typeof deal.growthOpportunities === 'string'
-        ? deal.growthOpportunities.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : (deal.growthOpportunities || []),
+          stakeholders: typeof deal.stakeholders === 'string' 
+            ? (deal.stakeholders as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.stakeholders) ? deal.stakeholders : []),
+          productsInUse: typeof deal.productsInUse === 'string'
+            ? (deal.productsInUse as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.productsInUse) ? deal.productsInUse : []),
+          growthOpportunities: typeof deal.growthOpportunities === 'string'
+            ? (deal.growthOpportunities as string).split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+            : (Array.isArray(deal.growthOpportunities) ? deal.growthOpportunities : []),
       creator: creator || { id: deal.createdBy, firstName: 'Unknown', lastName: 'User', email: 'unknown@example.com' },
       assignedTo: assignedTo || null,
       team: team || { id: 'no-team', name: 'No Team', description: 'No team assigned' },

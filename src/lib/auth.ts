@@ -82,7 +82,7 @@ export function hasPermission(userRole: UserRole, requiredRole: UserRole): boole
   const roleHierarchy: Record<UserRole, number> = {
     ADMIN: 3,
     SOLUTIONS_ARCHITECT: 2,
-    SALES_REP: 1,
+    SALES_DIRECTOR: 1,
   };
 
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];

@@ -42,7 +42,6 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
         assigneeId: task.assigneeId || '',
         blockedReason: task.blockedReason || '',
       });
-      console.log('Task subtasks:', task.subtasks);
       setSubtasks(task.subtasks || []);
       
       // Fetch team members
@@ -122,9 +121,8 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
 
       if (response.ok) {
         const newSubtaskData = await response.json();
-        console.log('New subtask data:', newSubtaskData);
-        console.log('Current subtasks:', subtasks);
-        setSubtasks([...subtasks, newSubtaskData.subtask]);
+        const updatedSubtasks = [...subtasks, newSubtaskData.subtask];
+        setSubtasks(updatedSubtasks);
         setNewSubtask('');
       }
     } catch (error) {
@@ -170,7 +168,7 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
 
   const getStatusIcon = (status: SubtaskStatus) => {
     switch (status) {
-      case 'COMPLETED':
+      case 'COMPLETE':
         return <CheckCircle2 className="h-4 w-4 text-green-600" />;
       case 'BLOCKED':
         return <AlertCircle className="h-4 w-4 text-red-600" />;
@@ -181,7 +179,7 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
 
   const getStatusColor = (status: SubtaskStatus) => {
     switch (status) {
-      case 'COMPLETED':
+      case 'COMPLETE':
         return 'text-green-600 bg-green-50';
       case 'BLOCKED':
         return 'text-red-600 bg-red-50';
@@ -313,7 +311,6 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
               <Label className="text-gray-900">Subtasks</Label>
               <div className="space-y-2 mt-2">
                 {subtasks.map((subtask, index) => {
-                  console.log('Rendering subtask:', subtask, 'index:', index, 'id:', subtask.id);
                   // Create a unique key that combines ID and index to avoid duplicates
                   const uniqueKey = subtask.id ? `${subtask.id}-${index}` : `subtask-${index}-${Date.now()}`;
                   return (
@@ -322,14 +319,14 @@ export function EditTaskModal({ isOpen, onClose, onSuccess, task }: EditTaskModa
                       type="button"
                       onClick={() => handleUpdateSubtaskStatus(
                         subtask.id, 
-                        subtask.status === 'COMPLETED' ? 'INCOMPLETE' : 'COMPLETED'
+                        subtask.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE'
                       )}
                       className="flex-shrink-0"
                     >
                       {getStatusIcon(subtask.status)}
                     </button>
                     <span className={`flex-1 text-sm ${getStatusColor(subtask.status)} px-2 py-1 rounded`}>
-                      {subtask.title}
+                      {subtask.title || `[No title - ID: ${subtask.id}]`}
                     </span>
                     <div className="flex space-x-1">
                       <Button

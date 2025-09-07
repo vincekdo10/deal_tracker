@@ -28,7 +28,8 @@ export const POST = withApiSecurity(async (
       );
     }
 
-    const task = await db.blockTask(id, body.reason, body.expectedUnblockDate);
+    const expectedUnblockDate = body.expectedUnblockDate ? new Date(body.expectedUnblockDate) : undefined;
+    const task = await db.blockTask(id, body.reason, expectedUnblockDate);
     
     if (!task) {
       return NextResponse.json(

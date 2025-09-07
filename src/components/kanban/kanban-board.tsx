@@ -46,6 +46,7 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
   });
   const [deletingTask, setDeletingTask] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Group tasks by status
@@ -60,11 +61,12 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
     });
 
     // Sort tasks by position within each column
-    Object.keys(grouped).forEach(status => {
-      grouped[status as TaskStatus].sort((a, b) => a.position - b.position);
-    });
+    const sortedGrouped = Object.keys(grouped).reduce((acc, status) => {
+      acc[status as TaskStatus] = [...grouped[status as TaskStatus]].sort((a, b) => a.position - b.position);
+      return acc;
+    }, {} as Record<TaskStatus, TaskWithSubtasks[]>);
 
-    setTaskColumns(grouped);
+    setTaskColumns(sortedGrouped);
   }, [tasks]);
 
   const handleTaskMove = async (taskId: string, newStatus: TaskStatus) => {
@@ -145,6 +147,18 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
     setShowDeleteConfirm(true);
   };
 
+  const toggleSubtasks = (taskId: string) => {
+    setExpandedSubtasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
   const confirmDeleteTask = async () => {
     if (!deletingTask) return;
 
@@ -185,7 +199,7 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
   };
 
   return (
-    <div className="flex space-x-6 overflow-x-auto pb-6">
+    <div className="flex space-x-6 overflow-x-auto pb-6 px-2 kanban-scroll">
       {columns.map((column) => {
         const StatusIcon = statusIcons[column.id];
         const tasks = taskColumns[column.id];
@@ -224,9 +238,10 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
                 {tasks.map((task) => {
                   const PriorityIcon = priorityIcons[task.priority || 'LOW'];
                   const subtasks = task.subtasks || [];
-                  const completedSubtasks = subtasks.filter(s => s.status === 'COMPLETED').length;
+                  const completedSubtasks = subtasks.filter(s => s.status === 'COMPLETE').length;
                   const totalSubtasks = subtasks.length;
                   const progress = getProgressPercentage(completedSubtasks, totalSubtasks);
+                  
 
                   return (
                     <div
@@ -246,9 +261,19 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
                       }}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2">
-                          {task.title}
-                        </h4>
+                        <div className="flex items-center space-x-2 flex-1">
+                          <h4 className="text-sm font-medium text-gray-900 line-clamp-2">
+                            {task.title}
+                          </h4>
+                          {totalSubtasks > 0 && (
+                            <div className="flex items-center space-x-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                              </svg>
+                              <span>Auto</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-1">
                           <Button 
                             variant="ghost" 
@@ -284,20 +309,80 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
                         </div>
                       )}
 
-                      {totalSubtasks > 0 && (
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                            <span>Progress</span>
-                            <span>{completedSubtasks}/{totalSubtasks}</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      {/* Subtasks Section */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                          <button
+                            onClick={() => toggleSubtasks(task.id)}
+                            className="flex items-center space-x-1 hover:text-gray-800 transition-colors"
+                          >
+                            <span>Subtasks</span>
+                            <span className="text-gray-400">({totalSubtasks})</span>
+                            <svg 
+                              className={`w-3 h-3 transition-transform ${expandedSubtasks.has(task.id) ? 'rotate-180' : ''}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          <span>{completedSubtasks}/{totalSubtasks}</span>
+                        </div>
+                        
+                        {totalSubtasks > 0 && (
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
                             <div
                               className="bg-blue-600 h-1.5 rounded-full transition-all"
                               style={{ width: `${progress}%` }}
                             />
                           </div>
-                        </div>
-                      )}
+                        )}
+                        
+                        {/* Subtasks List */}
+                        {expandedSubtasks.has(task.id) && (
+                            <div className="space-y-1 bg-gray-50 rounded-md p-2 border border-gray-200">
+                              {subtasks.length > 0 ? (
+                                subtasks.map((subtask, index) => {
+                                  return (
+                                    <div key={subtask.id || `subtask-${index}`} className="flex items-center space-x-2 text-xs">
+                                  <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                    subtask.status === 'COMPLETE' 
+                                      ? 'bg-green-100 text-green-600' 
+                                      : subtask.status === 'BLOCKED'
+                                      ? 'bg-red-100 text-red-600'
+                                      : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                    {subtask.status === 'COMPLETE' ? (
+                                      <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      </svg>
+                                    ) : subtask.status === 'BLOCKED' ? (
+                                      <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                      </svg>
+                                    ) : (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                    )}
+                                  </div>
+                                  <span className={`flex-1 truncate ${
+                                    subtask.status === 'COMPLETE' 
+                                      ? 'text-gray-500 line-through' 
+                                      : 'text-gray-700'
+                                  }`}>
+                                    {subtask.title || `[No title - ID: ${subtask.id}]`}
+                                  </span>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="text-xs text-gray-500 italic text-center py-2">
+                                  No subtasks yet
+                                </div>
+                              )}
+                            </div>
+                        )}
+                      </div>
 
                       {task.dueDate && (
                         <div className="flex items-center space-x-1 text-xs text-gray-500 mb-2">
@@ -306,18 +391,27 @@ export function KanbanBoard({ dealId, tasks, onTaskUpdate, onTaskCreate, onCreat
                         </div>
                       )}
 
-                      {task.assignee && task.assignee.firstName && task.assignee.lastName && (
-                        <div className="flex items-center space-x-2">
-                          <div className="h-6 w-6 bg-gray-300 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-gray-700">
-                              {task.assignee.firstName.charAt(0)}{task.assignee.lastName.charAt(0)}
+                      <div className="flex items-center space-x-2">
+                        {task.assignee && task.assignee.firstName && task.assignee.lastName ? (
+                          <>
+                            <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-700">
+                                {task.assignee.firstName.charAt(0)}{task.assignee.lastName.charAt(0)}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-600">
+                              {task.assignee.firstName} {task.assignee.lastName}
                             </span>
-                          </div>
-                          <span className="text-xs text-gray-600">
-                            {task.assignee.firstName} {task.assignee.lastName}
-                          </span>
-                        </div>
-                      )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-gray-500">?</span>
+                            </div>
+                            <span className="text-xs text-gray-500 italic">Unassigned</span>
+                          </>
+                        )}
+                      </div>
 
                       {task.status === 'BLOCKED' && task.blockedReason && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">

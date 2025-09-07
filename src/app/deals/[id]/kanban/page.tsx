@@ -7,11 +7,26 @@ import { KanbanBoard } from '@/components/kanban/kanban-board';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate, getDealStageColor } from '@/lib/utils';
+
+function getStageDisplayName(stage: DealStage): string {
+  const stageNames = {
+    'ENGAGE': 'Engage',
+    'DISCOVER': 'Discover',
+    'SCOPE': 'Scope',
+    'TECHNICAL_VALIDATION': 'Technical Validation',
+    'BUSINESS_JUSTIFICATION': 'Business Justification',
+    'NEGOTIATE': 'Negotiate',
+    'CLOSED_WON': 'Closed Won',
+    'CLOSED_LOST': 'Closed Lost'
+  };
+  return stageNames[stage] || stage;
+}
 import { DealWithRelations, TaskWithSubtasks, TaskStatus } from '@/types';
 import { ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { CreateTaskModal } from '@/components/modals/create-task-modal';
 import { EditTaskModal } from '@/components/modals/edit-task-modal';
+import { LogoPreview } from '@/components/ui/logo-preview';
 
 export default function DealKanbanPage() {
   const params = useParams();
@@ -147,17 +162,28 @@ export default function DealKanbanPage() {
       subtitle="Manage tasks and track progress"
     >
       <div className="space-y-6">
+        {/* Back Button */}
+        <div className="flex justify-start">
+          <Button variant="ghost" size="sm" asChild className="hover:bg-gray-100 hover:text-gray-900">
+            <Link href="/deals">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Deals
+            </Link>
+          </Button>
+        </div>
+
         {/* Deal Header */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" asChild className="hover:bg-gray-100 hover:text-gray-900">
-                  <Link href="/deals">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Deals
-                  </Link>
-                </Button>
+              <div className="flex items-center space-x-3">
+                {deal.companyDomain && (
+                  <LogoPreview 
+                    domain={deal.companyDomain} 
+                    size="lg" 
+                    className="flex-shrink-0"
+                  />
+                )}
                 <div>
                   <CardTitle className="text-2xl">{deal.accountName}</CardTitle>
                   <CardDescription>
@@ -167,7 +193,7 @@ export default function DealKanbanPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDealStageColor(deal.dealStage)}`}>
-                  {deal.dealStage.replace('_', ' ')}
+                  {getStageDisplayName(deal.dealStage)}
                 </span>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDealStageColor(deal.dealPriority)}`}>
                   {deal.dealPriority}
@@ -202,6 +228,17 @@ export default function DealKanbanPage() {
               </div>
 
               <div>
+                <h4 className="font-medium text-sm text-gray-900 mb-2">Economic Buyer</h4>
+                <div className="space-y-1 text-sm">
+                  {deal.eb ? (
+                    <p className="text-gray-600">{deal.eb}</p>
+                  ) : (
+                    <p className="text-gray-400 italic">Not specified</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
                 <h4 className="font-medium text-sm text-gray-900 mb-2">Products</h4>
                 <div className="space-y-1 text-sm">
                   {(deal.productsInUse || []).slice(0, 3).map((product, index) => (
@@ -230,8 +267,8 @@ export default function DealKanbanPage() {
                 <div className="space-y-1 text-sm">
                   {deal.assignedTo ? (
                     <>
-                      <p className="text-gray-600">{deal.assignedTo.firstName} {deal.assignedTo.lastName}</p>
-                      <p className="text-gray-500">{deal.assignedTo.email}</p>
+                      <p className="text-gray-600">{(deal.assignedTo as any).firstName} {(deal.assignedTo as any).lastName}</p>
+                      <p className="text-gray-500">{(deal.assignedTo as any).email}</p>
                     </>
                   ) : (
                     <>

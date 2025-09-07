@@ -42,7 +42,6 @@ export function CreateTeamModal({ isOpen, onClose, onTeamCreated }: CreateTeamMo
     setMessage(null);
 
     try {
-      console.log('Creating team with formData:', formData);
       await apiClient.post('/api/admin/teams', formData);
       setMessage({ type: 'success', text: 'Team created successfully!' });
       setFormData({
